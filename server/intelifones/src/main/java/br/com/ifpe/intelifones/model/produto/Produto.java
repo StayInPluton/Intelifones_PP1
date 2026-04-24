@@ -5,6 +5,9 @@ import org.hibernate.annotations.SQLRestriction;
 import br.com.ifpe.intelifones.util.entity.EntidadeAuditavel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -21,28 +24,31 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Produto extends EntidadeAuditavel  {
+public class Produto extends EntidadeAuditavel {
 
-   @ManyToOne
-   private CategoriaProduto categoria;
-
-  
-   @Column
-   private String codigo;
+   @GeneratedValue(strategy = GenerationType.IDENTITY)
+   private Long id;
 
    @Column
-   private String titulo;
+   private String nome;
 
    @Column
    private String descricao;
 
    @Column
-   private Double valorUnitario;
+   private Double preco;
 
    @Column
-   private Integer tempoEntregaMinimo;
+   private Boolean usado;
 
    @Column
-   private Integer tempoEntregaMaximo;
+   private String estadoConservacao; // novo, seminovo, etc
+
+   @Column
+   private Boolean ativo;
+
+   @ManyToOne
+   @JoinColumn(name = "categoria_id")
+   private CategoriaProduto categoria;
 
 }
