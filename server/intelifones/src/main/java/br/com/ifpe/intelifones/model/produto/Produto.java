@@ -29,26 +29,26 @@ public class Produto extends EntidadeAuditavel {
    @GeneratedValue(strategy = GenerationType.IDENTITY)
    private Long id;
 
-   @Column
+   @Column(nullable = false)
    private String nome;
 
    @Column
    private String descricao;
 
-   @Column
+   @Column(nullable = false)
    private Double preco;
 
-   @Column
+   @Column(nullable = false)
    private Boolean usado;
 
-   @Column
+   @Column(nullable = false)
    private String estadoConservacao; // novo, seminovo, etc
 
-   @Column
+   @Column(nullable = false)
    private Boolean ativo;
 
    @ManyToOne
-   @JoinColumn(name = "categoria_id")
+   @JoinColumn(name = "categoria_id", nullable = false)
    private CategoriaProduto categoria;
 
 }
