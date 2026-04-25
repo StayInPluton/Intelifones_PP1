@@ -1,6 +1,5 @@
 package br.com.ifpe.intelifones.api.produto;
 
-import br.com.ifpe.intelifones.model.produto.CategoriaProduto;
 import br.com.ifpe.intelifones.model.produto.Produto;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,20 +16,18 @@ public class ProdutoRequest {
     private String descricao;
     private Double preco;
     private Boolean usado;
-    private String estadoConservacao; // novo, seminovo, etc
+    private String estadoConservacao;
     private Boolean ativo;
-    private CategoriaProduto categoria;
+    private Long categoria_id;  // ← Volta a ser Long
 
     public Produto build() {
-
         return Produto.builder()
                 .nome(nome)
                 .descricao(descricao)
                 .preco(preco)
-                .usado(usado)
+                .usado(usado != null ? usado : false)
                 .estadoConservacao(estadoConservacao)
-                .ativo(ativo)
-                .categoria(categoria)
+                .ativo(ativo != null ? ativo : true)
                 .build();
     }
 }

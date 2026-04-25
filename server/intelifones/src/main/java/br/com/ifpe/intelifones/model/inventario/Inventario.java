@@ -2,6 +2,8 @@ package br.com.ifpe.intelifones.model.inventario;
 
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import br.com.ifpe.intelifones.model.produto.Produto;
 import br.com.ifpe.intelifones.model.vendedor.Vendedor;
 import br.com.ifpe.intelifones.util.entity.EntidadeAuditavel;
@@ -48,5 +50,6 @@ public class Inventario extends EntidadeAuditavel {
 
     @ManyToOne
     @JoinColumn(name = "vendedor_id", nullable = false)
+    @JsonIgnore
     private Vendedor vendedor;
 }

@@ -4,6 +4,8 @@ import java.util.List;
 
 import org.hibernate.annotations.SQLRestriction;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import br.com.ifpe.intelifones.util.entity.EntidadeAuditavel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -39,5 +41,6 @@ public class CategoriaProduto extends EntidadeAuditavel {
     private String descricao;
 
     @OneToMany(mappedBy = "categoria")
+    @JsonIgnore
     private List<Produto> produtos;
 }
