@@ -1,5 +1,7 @@
 package br.com.ifpe.intelifones.model.produto;
 
+import java.util.List;
+
 import org.hibernate.annotations.SQLRestriction;
 
 import br.com.ifpe.intelifones.util.entity.EntidadeAuditavel;
@@ -8,6 +10,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,4 +38,6 @@ public class CategoriaProduto extends EntidadeAuditavel {
     @Column(length = 500)
     private String descricao;
 
+    @OneToMany(mappedBy = "categoria")
+    private List<Produto> produtos;
 }
