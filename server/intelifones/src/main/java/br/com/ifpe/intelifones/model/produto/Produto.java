@@ -1,56 +1,46 @@
 package br.com.ifpe.intelifones.model.produto;
 
-import org.hibernate.annotations.SQLRestriction;
-
-import br.com.ifpe.intelifones.util.entity.EntidadeAuditavel;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import br.com.ifpe.intelifones.model.categoria.Categoria;
+import br.com.ifpe.intelifones.model.usuario.Usuario;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
-@Table(name = "Produto")
-@SQLRestriction("habilitado = true")
-@Builder
+@Table(name = "produto")
 @Getter
 @Setter
-@AllArgsConstructor
 @NoArgsConstructor
-public class Produto extends EntidadeAuditavel {
-   
+@AllArgsConstructor
+@Builder
+public class Produto {
+
    @Id
    @GeneratedValue(strategy = GenerationType.IDENTITY)
    private Long id;
 
-   @Column(nullable = false)
+   @Column(nullable = false, length = 100)
    private String nome;
 
-   @Column
+   @Column(length = 500)
    private String descricao;
 
    @Column(nullable = false)
    private Double preco;
 
    @Column(nullable = false)
+   private Integer quantidade;
+
    private Boolean usado;
 
    @Column(nullable = false)
-   private String estadoConservacao; // novo, seminovo, etc
+   private Boolean ativo = true;
 
-   @Column(nullable = false)
-   private Boolean ativo;
+   // Relacionamentos
+   @ManyToOne
+   @JoinColumn(name = "categoria_id")
+   private Categoria categoria;
 
    @ManyToOne
-   @JoinColumn(name = "categoria_id", nullable = true)
-   private CategoriaProduto categoria;
-
+   @JoinColumn(name = "vendedor_id", nullable = false)
+   private Usuario vendedor;
 }
