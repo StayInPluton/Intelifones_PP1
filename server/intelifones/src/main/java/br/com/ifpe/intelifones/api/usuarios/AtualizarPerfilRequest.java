@@ -6,5 +6,6 @@ import lombok.Data;
 public class AtualizarPerfilRequest {
     private String nome;
     private String telefone;
-    private String endereco;
+    private String cpf;
+    // REMOVIDO: String endereco — use POST /api/usuarios/enderecos para gerenciar endereços
 }

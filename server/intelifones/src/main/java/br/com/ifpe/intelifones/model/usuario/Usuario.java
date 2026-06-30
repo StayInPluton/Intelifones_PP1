@@ -1,11 +1,13 @@
 package br.com.ifpe.intelifones.model.usuario;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -29,23 +31,40 @@ public class Usuario implements UserDetails {
     private String email;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String senha;
 
     @Column(length = 20)
     private String telefone;
 
+    @Column(length = 14)
+    private String cpf;
+
     @Column(name = "imagem")
     private String imagem;
 
-    @Column(length = 200)
-    private String endereco;
+    // REMOVIDO: String endereco (campo único e sem estrutura)
+    // Endereços agora ficam na tabela Endereco (relação separada)
+    // Use GET /api/usuarios/enderecos para gerenciar
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private Role role;
 
     @Column(nullable = false)
+    @Builder.Default
     private Boolean ativo = true;
+
+    // --- Recuperação de senha ---
+    @Column(length = 64)
+    @JsonIgnore
+    private String tokenRecuperacaoSenha;
+
+    @Column
+    @JsonIgnore
+    private LocalDateTime tokenExpiracao;
+
+    // --- UserDetails ---
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -53,6 +72,7 @@ public class Usuario implements UserDetails {
     }
 
     @Override
+    @JsonIgnore
     public String getPassword() {
         return senha;
     }
@@ -63,22 +83,27 @@ public class Usuario implements UserDetails {
     }
 
     @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
+    public boolean isAccountNonExpired() { return true; }
 
     @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
+    public boolean isAccountNonLocked() { return true; }
 
     @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
+    public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() {
-        return ativo;
+    public boolean isEnabled() { return ativo; }
+
+    // Helper para validar token de recuperação
+    public boolean tokenValido(String token) {
+        return token != null
+                && token.equals(this.tokenRecuperacaoSenha)
+                && this.tokenExpiracao != null
+                && LocalDateTime.now().isBefore(this.tokenExpiracao);
+    }
+
+    public void limparToken() {
+        this.tokenRecuperacaoSenha = null;
+        this.tokenExpiracao = null;
     }
 }

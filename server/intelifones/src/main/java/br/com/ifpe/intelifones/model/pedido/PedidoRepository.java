@@ -7,6 +7,8 @@ import java.util.List;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
-    List<Pedido> findByComprador(Usuario comprador);
+    // Histórico ordenado do mais recente para o mais antigo
+    List<Pedido> findByCompradorOrderByDataFinalizacaoDesc(Usuario comprador);
 
+    List<Pedido> findByComprador(Usuario comprador);
 }

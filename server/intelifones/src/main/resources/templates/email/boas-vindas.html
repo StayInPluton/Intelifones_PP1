@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bem-vindo à Intelifones</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #18181b; }
+    .wrapper { max-width: 580px; margin: 40px auto; padding: 0 16px; }
+    .card { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .header { background: #18181b; padding: 32px 40px; text-align: center; }
+    .header h1 { color: #fff; font-size: 20px; font-weight: 600; }
+    .body { padding: 40px; }
+    .greeting { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+    .text { font-size: 15px; line-height: 1.7; color: #52525b; margin-bottom: 24px; }
+    .steps { background: #f9f9f9; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+    .steps h3 { font-size: 13px; font-weight: 600; color: #71717a; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 16px; }
+    .step { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+    .step:last-child { margin-bottom: 0; }
+    .step-num { background: #18181b; color: #fff; border-radius: 50%; width: 24px; height: 24px; min-width: 24px; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .step-text { font-size: 14px; line-height: 1.5; color: #3f3f46; }
+    .btn-wrap { text-align: center; }
+    .btn { display: inline-block; background: #18181b; color: #fff !important; text-decoration: none; padding: 14px 36px; border-radius: 8px; font-size: 15px; font-weight: 600; }
+    .footer { background: #f4f4f5; padding: 24px 40px; text-align: center; font-size: 12px; color: #a1a1aa; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="card">
+    <div class="header"><h1>📱 Intelifones</h1></div>
+    <div class="body">
+      <p class="greeting" th:text="'Olá, ' + ${nome} + '! 👋'">Olá!</p>
+      <p class="text">Sua conta foi criada com sucesso. Bem-vindo ao marketplace de peças para smartphones.</p>
+      <div class="steps" th:if="${!isVendedor}">
+        <h3>Próximos passos</h3>
+        <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Adicione seu endereço</strong> em Perfil → Endereços para agilizar suas compras e calcular frete.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Explore os produtos</strong> — telas, baterias, câmeras e muito mais.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Adicione ao carrinho</strong> e finalize sua compra em poucos cliques.</div></div>
+      </div>
+      <div class="steps" th:if="${isVendedor}">
+        <h3>Próximos passos</h3>
+        <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Complete seu perfil</strong> com telefone e endereço.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Cadastre seus produtos</strong> com fotos, descrição e preço.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Acompanhe suas vendas</strong> pelo painel do vendedor.</div></div>
+      </div>
+      <div class="btn-wrap"><a th:href="${baseUrl}" class="btn">Acessar a plataforma</a></div>
+    </div>
+    <div class="footer"><p>© 2025 Intelifones · Marketplace de peças para smartphones</p></div>
+  </div>
+</div>
+</body>
+</html>
