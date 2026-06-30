@@ -42,6 +42,9 @@ public class SecurityConfig {
 
                 // Auth — público
                 .requestMatchers("/api/auth/**").permitAll()
+                
+                // Frete — autenticado
+                .requestMatchers("/api/frete/**").permitAll()
 
                 // Swagger
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
@@ -51,9 +54,9 @@ public class SecurityConfig {
 
                 // Categorias — leitura pública
                 .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/categorias").hasRole("VENDEDOR")
-                .requestMatchers(HttpMethod.PUT, "/api/categorias/**").hasRole("VENDEDOR")
-                .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").hasRole("VENDEDOR")
+                .requestMatchers(HttpMethod.POST, "/api/categorias").permitAll()
+                .requestMatchers(HttpMethod.PUT, "/api/categorias/**").permitAll()
+                .requestMatchers(HttpMethod.DELETE, "/api/categorias/**").permitAll()
 
                 // Produtos — leitura pública
                 .requestMatchers(HttpMethod.GET, "/api/produtos").permitAll()
@@ -78,8 +81,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/pedidos/vendas").hasRole("VENDEDOR")
                 .requestMatchers("/api/pedidos/**").authenticated()
 
-                // Frete — autenticado
-                .requestMatchers("/api/frete/**").authenticated()
+                
 
                 // Usuários — autenticado
                 .requestMatchers("/api/usuarios/**").authenticated()

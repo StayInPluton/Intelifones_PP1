@@ -5,6 +5,9 @@ import br.com.ifpe.intelifones.model.frete.FreteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,11 +20,10 @@ public class FreteController {
 
     private final FreteService freteService;
 
-    @Operation(summary = "Calcular frete por endereço de entrega",
-               description = "Chame este endpoint antes de finalizar a compra para obter o valorFrete. " +
-                             "Você pode usar GET /api/usuarios/enderecos/principal/texto para obter o endereço formatado.")
-    @GetMapping("/calcular")
-    public ResponseEntity<FreteResponse> calcularFrete(@RequestParam String endereco) {
-        return ResponseEntity.ok(freteService.calcularFrete(endereco));
-    }
+@Operation(summary = "Calcular frete por endereço de entrega")
+@PostMapping("/calcular") 
+public ResponseEntity<FreteResponse> calcularFrete(@RequestBody Map<String, String> payload) {
+    String endereco = payload.get("endereco");
+    return ResponseEntity.ok(freteService.calcularFrete(endereco));
+}
 }

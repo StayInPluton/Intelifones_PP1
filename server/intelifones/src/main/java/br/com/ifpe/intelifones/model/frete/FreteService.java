@@ -43,6 +43,8 @@ public class FreteService {
             String response = restTemplate.getForObject(url, String.class);
             JsonNode root = objectMapper.readTree(response);
 
+             log.info("Resposta recebida da Google Maps API: {}", response);
+
             if (!"OK".equals(root.path("status").asText())) {
                 throw new BusinessException("Não foi possível calcular o frete. Verifique o endereço informado.");
             }

@@ -1,13 +1,14 @@
 package br.com.ifpe.intelifones.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule; 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
-@EnableAsync  // Habilita @Async para envio de e-mails em background
+@EnableAsync
 public class AppConfig {
 
     @Bean
@@ -17,6 +18,8 @@ public class AppConfig {
 
     @Bean
     public ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule()); 
+        return mapper;
     }
 }
