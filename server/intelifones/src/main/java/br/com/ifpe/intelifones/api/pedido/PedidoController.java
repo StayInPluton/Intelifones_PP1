@@ -1,5 +1,6 @@
 package br.com.ifpe.intelifones.api.pedido;
 
+import br.com.ifpe.intelifones.model.pedido.HistoricoItemDTO;
 import br.com.ifpe.intelifones.model.pedido.ItemPedido;
 import br.com.ifpe.intelifones.model.pedido.Pedido;
 import br.com.ifpe.intelifones.model.pedido.PedidoService;
@@ -41,11 +42,15 @@ public class PedidoController {
         return new ResponseEntity<>(pedido, HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Histórico de pedidos do comprador (ordenado do mais recente)")
-    @GetMapping("/historico")
-    public ResponseEntity<List<Pedido>> historico() {
-        return ResponseEntity.ok(pedidoService.listarHistoricoCompras(getUsuarioLogadoId()));
-    }
+
+// No seu PedidoController, troque apenas a assinatura deste método:
+// (o import de List<Pedido> pode sair se não for usado em outro lugar do controller)
+
+@Operation(summary = "Histórico de pedidos do comprador (ordenado do mais recente)")
+@GetMapping("/historico")
+public ResponseEntity<List<HistoricoItemDTO>> historico() {
+    return ResponseEntity.ok(pedidoService.listarHistoricoCompras(getUsuarioLogadoId()));
+}
 
     @Operation(summary = "Listar itens de um pedido específico")
     @GetMapping("/{pedidoId}/itens")

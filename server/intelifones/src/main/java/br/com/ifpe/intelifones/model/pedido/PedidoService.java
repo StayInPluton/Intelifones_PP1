@@ -118,11 +118,29 @@ public class PedidoService {
     /**
      * Histórico de pedidos do comprador (retorna os pedidos, não apenas os itens).
      */
-    public List<Pedido> listarHistoricoCompras(Long usuarioId) {
+     public List<HistoricoItemDTO> listarHistoricoCompras(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-        return pedidoRepository.findByCompradorOrderByDataFinalizacaoDesc(usuario);
+ 
+        return itemPedidoRepository
+                .findByPedido_CompradorOrderByPedido_DataFinalizacaoDesc(usuario)
+                .stream()
+                .map(item -> new HistoricoItemDTO(
+                        item.getId(),
+                        item.getQuantidade(),
+                        item.getPrecoUnitario(),
+                        new ProdutoResumoDTO(item.getProduto()),
+                        new PedidoResumoDTO(
+                                item.getPedido().getId(),
+                                item.getPedido().getStatus(),
+                                item.getPedido().getValorTotal(),
+                                item.getPedido().getValorFrete(),
+                                item.getPedido().getDataFinalizacao()
+                        )
+                ))
+                .toList();
     }
+ 
 
     /**
      * Histórico detalhado de um pedido específico com seus itens.
