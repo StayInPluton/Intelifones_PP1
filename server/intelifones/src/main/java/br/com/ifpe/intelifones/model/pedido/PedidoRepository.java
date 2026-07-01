@@ -3,12 +3,13 @@ package br.com.ifpe.intelifones.model.pedido;
 import br.com.ifpe.intelifones.model.usuario.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
-    // Histórico ordenado do mais recente para o mais antigo
-    List<Pedido> findByCompradorOrderByDataFinalizacaoDesc(Usuario comprador);
+    List<Pedido> findByCompradorOrderByDataPedidoDesc(Usuario comprador);
 
-    List<Pedido> findByComprador(Usuario comprador);
+    // Pedidos aguardando pagamento cujo prazo já expirou (para o scheduler)
+    List<Pedido> findByStatusAndExpiraEmBefore(StatusPedido status, LocalDateTime agora);
 }

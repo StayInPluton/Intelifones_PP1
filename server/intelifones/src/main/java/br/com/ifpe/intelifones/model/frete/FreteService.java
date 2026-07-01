@@ -1,5 +1,9 @@
 package br.com.ifpe.intelifones.model.frete;
 
+import br.com.ifpe.intelifones.model.produto.Produto;
+import br.com.ifpe.intelifones.model.produto.ProdutoRepository;
+import br.com.ifpe.intelifones.model.usuario.Endereco;
+import br.com.ifpe.intelifones.model.usuario.EnderecoRepository;
 import br.com.ifpe.intelifones.util.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,17 +22,52 @@ public class FreteService {
     @Value("${google.maps.api.key}")
     private String googleMapsApiKey;
 
-    @Value("${loja.endereco.origem}")
-    private String enderecoOrigem;
-
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final ProdutoRepository produtoRepository;
+    private final EnderecoRepository enderecoRepository;
 
-    public FreteResponse calcularFrete(String enderecoDestino) {
+    /**
+     * Calcula o frete de um produto específico até o endereço do comprador.
+     * A ORIGEM é o endereço principal do VENDEDOR do produto — correto para marketplace.
+     * O DESTINO é o endereço informado pelo comprador.
+     */
+    public FreteResponse calcularFretePorProduto(Long produtoId, String enderecoDestino) {
         if (enderecoDestino == null || enderecoDestino.trim().isEmpty()) {
             throw new BusinessException("Endereço de entrega é obrigatório");
         }
 
+        Produto produto = produtoRepository.findById(produtoId)
+                .orElseThrow(() -> new BusinessException("Produto não encontrado"));
+
+        // Busca o endereço principal do VENDEDOR deste produto
+        Endereco enderecoVendedor = enderecoRepository
+                .findByUsuarioIdAndPrincipalTrue(produto.getVendedor().getId())
+                .orElseThrow(() -> new BusinessException(
+                        "O vendedor deste produto ainda não cadastrou um endereço de envio"));
+
+        String enderecoOrigem = enderecoVendedor.toEnderecoCompleto();
+
+        return calcular(enderecoOrigem, enderecoDestino,
+                produto.getVendedor().getNome(), produto.getNome());
+    }
+
+    /**
+     * Calcula o frete de uma origem genérica (string) para um destino.
+     * Mantido para compatibilidade com o endpoint público de simulação.
+     */
+    public FreteResponse calcularFrete(String enderecoOrigem, String enderecoDestino) {
+        if (enderecoDestino == null || enderecoDestino.trim().isEmpty()) {
+            throw new BusinessException("Endereço de entrega é obrigatório");
+        }
+        if (enderecoOrigem == null || enderecoOrigem.trim().isEmpty()) {
+            throw new BusinessException("Endereço de origem é obrigatório");
+        }
+        return calcular(enderecoOrigem, enderecoDestino, null, null);
+    }
+
+    private FreteResponse calcular(String enderecoOrigem, String enderecoDestino,
+                                    String nomeVendedor, String nomeProduto) {
         String url = UriComponentsBuilder
                 .fromHttpUrl("https://maps.googleapis.com/maps/api/distancematrix/json")
                 .queryParam("origins", enderecoOrigem)
@@ -43,7 +82,7 @@ public class FreteService {
             String response = restTemplate.getForObject(url, String.class);
             JsonNode root = objectMapper.readTree(response);
 
-             log.info("Resposta recebida da Google Maps API: {}", response);
+            log.info("Google Maps API response: {}", response);
 
             if (!"OK".equals(root.path("status").asText())) {
                 throw new BusinessException("Não foi possível calcular o frete. Verifique o endereço informado.");
@@ -63,6 +102,8 @@ public class FreteService {
             return FreteResponse.builder()
                     .enderecoOrigem(enderecoOrigem)
                     .enderecoDestino(enderecoDestino)
+                    .nomeVendedor(nomeVendedor)
+                    .nomeProduto(nomeProduto)
                     .distanciaTexto(distanciaTexto)
                     .distanciaKm(distanciaKm)
                     .duracaoEstimada(duracaoTexto)

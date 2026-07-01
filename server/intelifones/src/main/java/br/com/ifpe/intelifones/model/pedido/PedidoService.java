@@ -11,6 +11,7 @@ import br.com.ifpe.intelifones.model.usuario.Usuario;
 import br.com.ifpe.intelifones.model.usuario.UsuarioRepository;
 import br.com.ifpe.intelifones.util.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +20,10 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PedidoService {
+
+    private static final long MINUTOS_RESERVA = 30;
 
     private final PedidoRepository pedidoRepository;
     private final ItemPedidoRepository itemPedidoRepository;
@@ -30,36 +34,27 @@ public class PedidoService {
 
     @Transactional
     public Pedido finalizarCompra(Long usuarioId, FinalizarCompraRequest request) {
-
-        // 1. Buscar usuário
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
 
-        // 2. Buscar carrinho do usuário
         Carrinho carrinho = carrinhoRepository.findByUsuario(usuario)
                 .orElseThrow(() -> new BusinessException("Carrinho não encontrado. Adicione produtos antes de finalizar."));
 
-        // 3. Buscar itens do carrinho
         List<ItemCarrinho> itensCarrinho = itemCarrinhoRepository.findByCarrinho(carrinho);
-
         if (itensCarrinho.isEmpty()) {
             throw new BusinessException("Carrinho vazio. Adicione produtos antes de finalizar.");
         }
 
-        // 4. Validar frete
         double valorFrete = request.getValorFrete() != null ? request.getValorFrete() : 0.0;
-        if (valorFrete < 0) {
-            throw new BusinessException("Valor de frete inválido");
-        }
+        if (valorFrete < 0) throw new BusinessException("Valor de frete inválido");
 
-        // 5. Criar o pedido com dataPedido e dataFinalizacao
         LocalDateTime agora = LocalDateTime.now();
 
         Pedido pedido = Pedido.builder()
                 .comprador(usuario)
-                .status(StatusPedido.PAGO)
+                .status(StatusPedido.AGUARDANDO_PAGAMENTO)
                 .dataPedido(agora)
-                .dataFinalizacao(agora)   // ← Data/hora exata da compra (pedido do companheiro)
+                .expiraEm(agora.plusMinutes(MINUTOS_RESERVA))
                 .valorTotal(0.0)
                 .valorFrete(valorFrete)
                 .endereco(request.getEndereco())
@@ -71,109 +66,130 @@ public class PedidoService {
                 .build();
 
         pedido = pedidoRepository.save(pedido);
-
-        // 6. Processar itens: validar estoque, criar ItemPedido, diminuir estoque
         double subtotal = 0.0;
 
         for (ItemCarrinho item : itensCarrinho) {
             Produto produto = item.getProduto();
 
-            if (!produto.getAtivo()) {
+            if (!produto.getAtivo())
                 throw new BusinessException("Produto indisponível: " + produto.getNome());
-            }
 
-            if (produto.getQuantidade() < item.getQuantidade()) {
-                throw new BusinessException(
-                        "Estoque insuficiente para: " + produto.getNome()
-                        + ". Disponível: " + produto.getQuantidade()
-                        + ", solicitado: " + item.getQuantidade());
-            }
+            if (produto.getQuantidade() < item.getQuantidade())
+                throw new BusinessException("Estoque insuficiente para: " + produto.getNome()
+                        + ". Disponível: " + produto.getQuantidade());
 
-            ItemPedido itemPedido = ItemPedido.builder()
+            itemPedidoRepository.save(ItemPedido.builder()
                     .pedido(pedido)
                     .produto(produto)
                     .quantidade(item.getQuantidade())
-                    .precoUnitario(produto.getPreco())   // snapshot do preço no momento da compra
-                    .build();
-
-            itemPedidoRepository.save(itemPedido);
+                    .precoUnitario(produto.getPreco())
+                    .build());
 
             subtotal += produto.getPreco() * item.getQuantidade();
-
-            // Diminuir estoque
             produto.setQuantidade(produto.getQuantidade() - item.getQuantidade());
             produtoRepository.save(produto);
         }
 
-        // 7. Calcular total = subtotal dos itens + frete
         pedido.setValorTotal(subtotal + valorFrete);
         pedidoRepository.save(pedido);
-
-        // 8. Limpar carrinho após finalizar
         itemCarrinhoRepository.deleteAll(itensCarrinho);
 
         return pedido;
     }
 
     /**
-     * Histórico de pedidos do comprador (retorna os pedidos, não apenas os itens).
+     * Confirma o pagamento: AGUARDANDO_PAGAMENTO → PAGO.
+     * Pedido CANCELADO ou já PAGO gera erro.
      */
+    @Transactional
+    public Pedido confirmarPagamento(Long pedidoId, Long usuarioId) {
+        Pedido pedido = buscarPedidoDoUsuario(pedidoId, usuarioId);
+
+        if (pedido.getStatus() == StatusPedido.CANCELADO)
+            throw new BusinessException("Pedido cancelado (reserva expirada ou cancelamento manual). Não pode mais ser pago.");
+
+        if (pedido.getStatus() == StatusPedido.PAGO)
+            throw new BusinessException("Pedido já está pago.");
+
+        if (pedido.getStatus() != StatusPedido.AGUARDANDO_PAGAMENTO)
+            throw new BusinessException("Status inválido para confirmação: " + pedido.getStatus());
+
+        pedido.setStatus(StatusPedido.PAGO);
+        pedido.setDataFinalizacao(LocalDateTime.now());
+        pedido.setExpiraEm(null);
+        return pedidoRepository.save(pedido);
+    }
+
+    /**
+     * Chamado pelo scheduler a cada minuto.
+     * Expira pedidos AGUARDANDO_PAGAMENTO cujo expiraEm já passou,
+     * devolve o estoque e cancela.
+     */
+    @Transactional
+    public int expirarPedidosVencidos() {
+        List<Pedido> vencidos = pedidoRepository
+                .findByStatusAndExpiraEmBefore(StatusPedido.AGUARDANDO_PAGAMENTO, LocalDateTime.now());
+
+        for (Pedido pedido : vencidos) {
+            itemPedidoRepository.findByPedido(pedido).forEach(item -> {
+                Produto p = item.getProduto();
+                p.setQuantidade(p.getQuantidade() + item.getQuantidade());
+                produtoRepository.save(p);
+            });
+            pedido.setStatus(StatusPedido.CANCELADO);
+            pedidoRepository.save(pedido);
+            log.info("Pedido #{} expirado — estoque devolvido", pedido.getId());
+        }
+
+        return vencidos.size();
+    }
+
     public List<Pedido> listarHistoricoCompras(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
-        return pedidoRepository.findByCompradorOrderByDataFinalizacaoDesc(usuario);
+        return pedidoRepository.findByCompradorOrderByDataPedidoDesc(usuario);
     }
 
-    /**
-     * Histórico detalhado de um pedido específico com seus itens.
-     */
     public List<ItemPedido> listarItensDoPedido(Long pedidoId, Long usuarioId) {
-        Pedido pedido = pedidoRepository.findById(pedidoId)
-                .orElseThrow(() -> new BusinessException("Pedido não encontrado"));
-
-        if (!pedido.getComprador().getId().equals(usuarioId)) {
-            throw new BusinessException("Acesso negado a este pedido");
-        }
-
-        return itemPedidoRepository.findByPedido(pedido);
+        return itemPedidoRepository.findByPedido(buscarPedidoDoUsuario(pedidoId, usuarioId));
     }
 
-    /**
-     * Vendas do vendedor logado.
-     */
     public List<ItemPedido> listarVendasDoVendedor(Long vendedorId) {
         return itemPedidoRepository.findByProduto_Vendedor_Id(vendedorId);
     }
 
     /**
-     * Cancela um pedido (apenas se ainda estiver como PAGO/PENDENTE).
+     * Cancela pedido manualmente.
+     * REGRA: pedido PAGO não pode ser cancelado por esta via.
      */
     @Transactional
     public Pedido cancelarPedido(Long pedidoId, Long usuarioId) {
-        Pedido pedido = pedidoRepository.findById(pedidoId)
-                .orElseThrow(() -> new BusinessException("Pedido não encontrado"));
+        Pedido pedido = buscarPedidoDoUsuario(pedidoId, usuarioId);
 
-        if (!pedido.getComprador().getId().equals(usuarioId)) {
-            throw new BusinessException("Acesso negado a este pedido");
-        }
+        if (pedido.getStatus() == StatusPedido.PAGO)
+            throw new BusinessException("Pedido já pago não pode ser cancelado. Entre em contato com o suporte.");
 
-        if (pedido.getStatus() == StatusPedido.ENVIADO || pedido.getStatus() == StatusPedido.ENTREGUE) {
-            throw new BusinessException("Não é possível cancelar um pedido já " + pedido.getStatus().name().toLowerCase());
-        }
+        if (pedido.getStatus() == StatusPedido.ENVIADO || pedido.getStatus() == StatusPedido.ENTREGUE)
+            throw new BusinessException("Não é possível cancelar pedido já " + pedido.getStatus().name().toLowerCase());
 
-        if (pedido.getStatus() == StatusPedido.CANCELADO) {
+        if (pedido.getStatus() == StatusPedido.CANCELADO)
             throw new BusinessException("Pedido já está cancelado");
-        }
 
-        // Repor estoque
-        List<ItemPedido> itens = itemPedidoRepository.findByPedido(pedido);
-        for (ItemPedido item : itens) {
-            Produto produto = item.getProduto();
-            produto.setQuantidade(produto.getQuantidade() + item.getQuantidade());
-            produtoRepository.save(produto);
-        }
+        itemPedidoRepository.findByPedido(pedido).forEach(item -> {
+            Produto p = item.getProduto();
+            p.setQuantidade(p.getQuantidade() + item.getQuantidade());
+            produtoRepository.save(p);
+        });
 
         pedido.setStatus(StatusPedido.CANCELADO);
         return pedidoRepository.save(pedido);
+    }
+
+    private Pedido buscarPedidoDoUsuario(Long pedidoId, Long usuarioId) {
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new BusinessException("Pedido não encontrado"));
+        if (!pedido.getComprador().getId().equals(usuarioId))
+            throw new BusinessException("Acesso negado a este pedido");
+        return pedido;
     }
 }
